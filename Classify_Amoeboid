@@ -1,0 +1,126 @@
+image_folder_max = 'C:\Users\Owner\Desktop\Stoll Fellowship Code\Max_area';
+filenames_max = dir(fullfile(image_folder_max,'*tif'));
+total_images_max = numel(filenames_max);
+
+image_folder_BW2 = 'C:\Users\Owner\Desktop\Stoll Fellowship Code\Output_BW2';
+filenames_BW2 = dir(fullfile(image_folder_BW2,'*tif'));
+total_images_BW2 = numel(filenames_BW2);
+num_clicks = 0; % Initialize parameter to keep track of the total number of times user has clicked
+num_clicks_array = []; 
+j = 0; 
+
+dlgtitle = 'Classify Individual Invasions';
+uiwait(msgbox({'Please click on amoeboid invasions'; 'Please click return when you are finished selecting invasions'},dlgtitle));
+for n = 1:total_images_max
+    f_max = fullfile(image_folder_max, filenames_max(n).name);
+    Image_Max = imread(f_max);
+    figure(n);
+    
+    f_BW2 = fullfile(image_folder_BW2, filenames_BW2(n).name);
+    Image_BW2 = imread(f_BW2);
+    figure(n);
+    
+    %Initialize cell arrays to store data for selected invasions
+index_collective_invasions = {};
+index_amoeboid_invasions = {};
+index_mesenchymal_invasions = {};
+
+%Initialize arrays for both x and y coordinates of amoeboid invasions
+X_A_cor = [];
+Y_A_cor = [];
+Subtract_C = imsubtract(Image_BW2, Image_Max);
+imshow(Subtract_C);
+
+Classify_Invasions = bwareaopen(Subtract_C, 300);
+Classify_Invasions_L = bwlabel(Classify_Invasions);
+labeled_Image = Classify_Invasions_L;
+stats_classify = regionprops(Classify_Invasions_L, 'Area');
+Dim = size(stats_classify);
+num_objects = Dim(1,1);
+%imshow(Classify_Invasions_L);
+%Initialize String array for adding text function
+if num_objects > 0
+%dlgtitle = 'Classify Individual Invasions';
+%uiwait(msgbox({'Please click on amoeboid invasions'; 'Please click return when you are finished selecting invasions'},dlgtitle));
+count = 500;
+num_clicks_A = 0; % Keep track of how many times user has clicked
+%figure, imshow(Classify_Invasions);
+str = strings(1,500);
+for i = 1:500
+    str(1, i) = i;
+end
+while count < 1000
+%for c = 1: num_objects
+%figure, imshow(Classify_Invasions);
+hold on
+[yCenter, xCenter] = ginput(1);
+hold off
+if isempty(yCenter)
+    break;
+end
+% up number of times user clicked
+num_clicks = num_clicks + 1;
+num_clicks_A = num_clicks_A +1;
+% put x over selected cell
+hold on
+%text = convertStringsToChars(str(1, num_clicks));
+labeled_Image = insertText(labeled_Image, [yCenter, xCenter], str(1, num_clicks), 'FontSize', 30, 'BoxColor', 'yellow', 'BoxOpacity', 1, 'TextColor', 'black');
+%text(yCenter, xCenter, str(1, num_clicks),'Color','red','FontSize',10);
+%labeled_Image = labelimg(Classify_Invasions_L, text);
+imshow(labeled_Image); title('Labeled image')
+%plot(yCenter, xCenter);
+%gtext(str(1,num_clicks),'Color','red','FontSize',10);
+% up the count
+count = count + 1;
+%Save coordinates into arrays
+X_A_cor(num_clicks_A) = xCenter;
+Y_A_cor(num_clicks_A) = yCenter;
+%all_A_Y = (yCenter);
+%all_A_X = (xcenter);
+num_clicks_array(num_clicks) = num_clicks;
+end
+
+%num_clicks = num_clicks + num_clicks_A;
+for s = 1:num_clicks_A
+    j = j + 1;
+if num_clicks_A == 0
+    FileName_output = fullfile('C:\Users\Owner\Desktop\Stoll Fellowship Code\Needle Tumor Amoeboid Invasions',sprintf('%d.tif',n));
+    imwrite(labeled_Image,FileName_output);% writes image to amoeboid invasions folder
+    
+else
+    [L, num_Obj] = bwlabel(Classify_Invasions);
+    b = bwboundaries(Classify_Invasions);
+    Selec = cell(1,1);
+    for k = 1:num_Obj
+        Obj = L ==k;
+        bb = b{k};
+        X_obj = bb(:, 1);
+        Y_obj = bb(:, 2);
+        Selec{k} = inpolygon(X_A_cor(s),Y_A_cor(s),X_obj,Y_obj); 
+    end
+    Selec;
+    Selec = [Selec{:}];
+    [value,index] = max(Selec);
+    Obj = L ==index;
+    %figure, imshow(Obj);
+    stats_A_invasion = regionprops(logical(Obj), 'all');
+    stats_A_invasion_cell = struct2cell(stats_A_invasion);
+    %index_amoeboid_invasions{s} = stats_A_invasion_cell;
+    %stats_amoeboid_I_Table = regionprops('table', logical(Obj), 'all');
+    save(['C:\Users\Owner\Desktop\Stoll Fellowship Code\Needle_Tumor_Analysis\analysis_amoeboid' num2str(num_clicks_array(j)) '.mat'],'stats_A_invasion_cell')
+    FileName_output = fullfile('C:\Users\Owner\Desktop\Stoll Fellowship Code\Needle Tumor Amoeboid Invasions',sprintf('%d.tif',n));
+    imwrite(labeled_Image,FileName_output);% writes image to amoeboid invasions folder
+end
+end
+
+
+end
+
+end
+
+fileFolder ='C:\Users\Owner\Desktop\Stoll Fellowship Code\Needle Tumor Amoeboid Invasions';
+dirOutput = dir(fullfile(fileFolder,'*.tif'));
+total_labeled = numel(dirOutput);
+fileNames = {dirOutput.name};
+
+montage(fileNames, 'BackgroundColor','w',"BorderSize",5);
