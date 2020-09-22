@@ -105,11 +105,29 @@ else
     %figure, imshow(Obj);
     stats_A_invasion = regionprops(logical(Obj), 'all');
     stats_A_invasion_cell = struct2cell(stats_A_invasion);
-    %index_amoeboid_invasions{s} = stats_A_invasion_cell;
-    %stats_amoeboid_I_Table = regionprops('table', logical(Obj), 'all');
+   
+    cell_image_bb = stats_A_invasion.BoundingBox;
+    bbMatrix = vertcat(stats_A_invasion(:).BoundingBox);
+    %get dimensions of bounding box 
+    height = bbMatrix(:,3)+ 10; %height
+    width = bbMatrix(:,4)+ 10; %width 
+    X_cor_TL = bbMatrix(:,1) - 5;
+    Y_cor_TL = bbMatrix(:, 2) - 5; 
+    % Use bounding box dimensions to generate frame for individual cells 
+    cell_image_cropped = imcrop(labeled_Image_C, [X_cor_TL, Y_cor_TL, height, width]);
+    % get outline of cropped image
+    cell_image_cropped_b = boundarymask(cell_image_cropped);
+    
+    cell_image = boundarymask(labeled_Image_C);
+    imshow(cell_image_cropped_b);
+   
     save(['C:\Users\Owner\Desktop\Stoll Fellowship Code\Needle_Tumor_Analysis\analysis_amoeboid' num2str(num_clicks_array(j)) '.mat'],'stats_A_invasion_cell')
     FileName_output = fullfile('C:\Users\Owner\Desktop\Stoll Fellowship Code\Needle Tumor Amoeboid Invasions',sprintf('%d.tif',n));
     imwrite(labeled_Image,FileName_output);% writes image to amoeboid invasions folder
+    save(['C:\Users\Owner\Desktop\Stoll Fellowship Code\Needle_Tumor_Analysis\analysis_amoeboid' num2str(num_clicks_array(j)) '.mat'],'stats_A_invasion_cell')
+    FileName_output_C = fullfile('C:\Users\Owner\Desktop\Stoll Fellowship Code\Needle Tumor Amoeboid Invasions Cropped',sprintf('%d.tif',c));
+    imwrite(cell_image_cropped,FileName_output_C);% writes image to amoeboid invasions folder
+    
 end
 end
 
